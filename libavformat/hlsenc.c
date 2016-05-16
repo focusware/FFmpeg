@@ -453,12 +453,17 @@ static int hls_delete_old_segments(AVFormatContext *s, HLSContext *hls,
     AVIOContext *out = NULL;
     const char *proto = NULL;
 
+	// Calculate the maximum playlist duration.
+	playlist_duration = hls->max_nb_segments * hls->time;
+
+	// Compensate for the segments that are currently in the playlist.
     segment = vs->segments;
     while (segment) {
-        playlist_duration += segment->duration;
+        playlist_duration -= segment->duration;
         segment = segment->next;
     }
 
+	// Check the old-segments.
     segment = vs->old_segments;
     segment_cnt = 0;
     while (segment) {
