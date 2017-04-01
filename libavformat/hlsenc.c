@@ -76,6 +76,8 @@ typedef struct HLSSegment {
     int64_t pos;
     int64_t size;
     unsigned var_stream_idx;
+    int64_t start_pts;
+    int64_t end_pts;
 
     char key_uri[LINE_BUFFER_SIZE + 1];
     char iv_string[KEYSIZE*2 + 1];
@@ -1013,6 +1015,8 @@ static int hls_append_segment(struct AVFormatContext *s, HLSContext *hls,
     en->size     = size;
     en->next     = NULL;
     en->discont  = 0;
+    en->start_pts = AV_NOPTS_VALUE;
+    en->end_pts   = AV_NOPTS_VALUE;
 
     if (vs->discontinuity) {
         en->discont = 1;
@@ -2291,6 +2295,9 @@ static int hls_write_packet(AVFormatContext *s, AVPacket *pkt)
                 ff_format_io_close(s, &vs->out);
             }
         }
+        // Store the end pts in the current segment.
+        hls->last_segment->start_pts = hls->end_pts;
+        hls->last_segment->end_pts = pkt->pts;
 
         old_filename = av_strdup(vs->avf->url);
         if (!old_filename) {
