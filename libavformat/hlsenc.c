@@ -50,6 +50,8 @@ typedef struct HLSSegment {
     int64_t size;
     int64_t start_pts;
     int64_t end_pts;
+    int64_t start_frame;
+    int64_t end_frame;
 
     char key_uri[LINE_BUFFER_SIZE + 1];
     char iv_string[KEYSIZE*2 + 1];
@@ -103,6 +105,7 @@ typedef struct HLSContext {
     int has_subtitle;
     int64_t start_pts;
     int64_t end_pts;
+    int64_t end_frame;
     double duration;      // last segment duration computed so far, in seconds
     int64_t start_pos;    // last segment starting position
     int64_t size;         // last segment size
@@ -390,11 +393,13 @@ static int hls_append_segment(struct AVFormatContext *s, HLSContext *hls, double
         en->sub_filename[0] = '\0';
 
     en->duration = duration;
-    en->pos       = pos;
-    en->size      = size;
-    en->start_pts = AV_NOPTS_VALUE;
-    en->end_pts   = AV_NOPTS_VALUE;
-    en->next      = NULL;
+    en->pos         = pos;
+    en->size        = size;
+    en->start_pts   = AV_NOPTS_VALUE;
+    en->end_pts     = AV_NOPTS_VALUE;
+    en->start_frame = 0;
+    en->end_frame   = 0;
+    en->next        = NULL;
 
     if (hls->key_info_file) {
         av_strlcpy(en->key_uri, hls->key_uri, sizeof(en->key_uri));
@@ -977,6 +982,7 @@ static int hls_write_packet(AVFormatContext *s, AVPacket *pkt)
     if (hls->start_pts == AV_NOPTS_VALUE) {
         hls->start_pts = pkt->pts;
         hls->end_pts   = pkt->pts;
+        hls->end_frame = st->nb_frames;
     }
 
     if (hls->has_video) {
@@ -1005,8 +1011,11 @@ static int hls_write_packet(AVFormatContext *s, AVPacket *pkt)
         // Store the end pts in the current segment.
         hls->last_segment->start_pts = hls->end_pts;
         hls->last_segment->end_pts = pkt->pts;
+        hls->last_segment->start_frame = hls->end_frame;
+        hls->last_segment->end_frame = st->nb_frames;
 
         hls->end_pts = pkt->pts;
+        hls->end_frame = st->nb_frames;
         hls->duration = 0;
 
         if (hls->flags & HLS_SINGLE_FILE) {
