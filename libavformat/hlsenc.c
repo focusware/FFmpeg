@@ -1449,6 +1449,7 @@ static int hls_write_packet(AVFormatContext *s, AVPacket *pkt)
             av_free(old_filename);
             return ret;
         }
+        av_free(old_filename);
     }
 
     ret = ff_write_chained(oc, stream_index, pkt, s, 0);
