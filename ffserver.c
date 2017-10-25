@@ -2216,8 +2216,14 @@ static int open_input_stream(HTTPContext *c, const char *info)
                 http_log("Invalid date specification '%s' for stream\n", buf);
                 return ret;
             }
-        } else
-            stream_pos = 0;
+        } else {
+            if (c->stream->prebuffer != 0) {
+                int64_t hourstart = (av_gettime() % ((int64_t)1000000 * 3600)) - c->stream->prebuffer * (int64_t)1000;
+                fprintf(stderr, "[%s] Correct for start and using pre-buffer: %d\n", input_filename, c->stream->prebuffer);
+                stream_pos = hourstart;
+            } else
+                stream_pos = 0;
+      }
     }
     if (!input_filename[0]) {
         http_log("No filename was specified for stream\n");
