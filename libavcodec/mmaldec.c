@@ -85,6 +85,7 @@ typedef struct MMALDecodeContext {
     int64_t packets_sent;
     atomic_int packets_buffered;
     int64_t frames_output;
+    int64_t last_pts_keyframe;
     int eos_received;
     int eos_sent;
     int extradata_sent;
@@ -538,6 +539,9 @@ static int ffmmal_add_packet(AVCodecContext *avctx, AVPacket *avpkt,
 
         buffer->pts = avpkt->pts == AV_NOPTS_VALUE ? MMAL_TIME_UNKNOWN : avpkt->pts;
         buffer->dts = avpkt->dts == AV_NOPTS_VALUE ? MMAL_TIME_UNKNOWN : avpkt->dts;
+        if (avpkt->flags & AV_PKT_FLAG_KEY) {
+            ctx->last_pts_keyframe = avpkt->pts;
+        }
 
         if (!size) {
             buffer->flags |= MMAL_BUFFER_HEADER_FLAG_FRAME_END;
@@ -660,6 +664,7 @@ FF_DISABLE_DEPRECATION_WARNINGS
 FF_ENABLE_DEPRECATION_WARNINGS
 #endif
     frame->pkt_dts = AV_NOPTS_VALUE;
+    frame->key_frame = (ctx->last_pts_keyframe == frame->pts) ? 1 : 0;
 
 done:
     return ret;
