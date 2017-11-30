@@ -174,6 +174,7 @@ typedef struct HLSContext {
 
     float time;            // Set by a private option.
     float init_time;       // Set by a private option.
+    int64_t time_delta;    // Set by a private option.
     int max_nb_segments;   // Set by a private option.
     int hls_delete_threshold; // Set by a private option.
 #if FF_API_HLS_WRAP
@@ -2139,6 +2140,10 @@ static int hls_write_header(AVFormatContext *s)
             }
         }
     }
+
+    if (hls->time_delta > 0)
+        av_log(hls, AV_LOG_INFO, "Using time-delta %" PRId64 "\n", hls->time_delta);
+
 fail:
 
     return ret;
@@ -2223,7 +2228,7 @@ static int hls_write_packet(AVFormatContext *s, AVPacket *pkt)
     }
 
     if (vs->packets_written && can_split && av_compare_ts(pkt->pts - vs->start_pts, st->time_base,
-                                                          end_pts, AV_TIME_BASE_Q) >= 0) {
+                                                          end_pts - hls->time_delta, AV_TIME_BASE_Q) >= 0) {
         int64_t new_start_pos;
         char *old_filename = NULL;
         int byterange_mode = (hls->flags & HLS_SINGLE_FILE) || (hls->max_seg_size > 0);
@@ -2814,6 +2819,7 @@ fail:
 static const AVOption options[] = {
     {"start_number",  "set first number in the sequence",        OFFSET(start_sequence),AV_OPT_TYPE_INT64,  {.i64 = 0},     0, INT64_MAX, E},
     {"hls_time",      "set segment length in seconds",           OFFSET(time),    AV_OPT_TYPE_FLOAT,  {.dbl = 2},     0, FLT_MAX, E},
+    {"hls_time_delta","set approximation value used for the segment times", OFFSET(time_delta), AV_OPT_TYPE_DURATION, {.i64 = 0}, 0, 0, E },
     {"hls_init_time", "set segment length in seconds at init list",           OFFSET(init_time),    AV_OPT_TYPE_FLOAT,  {.dbl = 0},     0, FLT_MAX, E},
     {"hls_list_size", "set maximum number of playlist entries",  OFFSET(max_nb_segments),    AV_OPT_TYPE_INT,    {.i64 = 5},     0, INT_MAX, E},
     {"hls_delete_threshold", "set number of unreferenced segments to keep before deleting",  OFFSET(hls_delete_threshold),    AV_OPT_TYPE_INT,    {.i64 = 1},     1, INT_MAX, E},
