@@ -78,6 +78,8 @@ typedef struct HLSSegment {
     unsigned var_stream_idx;
     int64_t start_pts;
     int64_t end_pts;
+    int64_t start_frame;
+    int64_t end_frame;
 
     char key_uri[LINE_BUFFER_SIZE + 1];
     char iv_string[KEYSIZE*2 + 1];
@@ -127,6 +129,7 @@ typedef struct VariantStream {
     double dpp;           // duration per packet
     int64_t start_pts;
     int64_t end_pts;
+    int64_t end_frame;
     double duration;      // last segment duration computed so far, in seconds
     int64_t start_pos;    // last segment starting position
     int64_t size;         // last segment size
@@ -1012,12 +1015,14 @@ static int hls_append_segment(struct AVFormatContext *s, HLSContext *hls,
         en->sub_filename[0] = '\0';
 
     en->duration = duration;
-    en->pos      = pos;
-    en->size     = size;
-    en->next     = NULL;
-    en->discont  = 0;
-    en->start_pts = AV_NOPTS_VALUE;
-    en->end_pts   = AV_NOPTS_VALUE;
+    en->pos         = pos;
+    en->size        = size;
+    en->next        = NULL;
+    en->discont     = 0;
+    en->start_pts   = AV_NOPTS_VALUE;
+    en->end_pts     = AV_NOPTS_VALUE;
+    en->start_frame = 0;
+    en->end_frame   = 0;
 
     if (vs->discontinuity) {
         en->discont = 1;
@@ -2198,6 +2203,7 @@ static int hls_write_packet(AVFormatContext *s, AVPacket *pkt)
 
     if (vs->start_pts == AV_NOPTS_VALUE) {
         vs->start_pts = pkt->pts;
+        vs->end_frame = st->nb_frames;
     }
 
     if (vs->has_video) {
@@ -2300,9 +2306,6 @@ static int hls_write_packet(AVFormatContext *s, AVPacket *pkt)
                 ff_format_io_close(s, &vs->out);
             }
         }
-        // Store the end pts in the current segment.
-        hls->last_segment->start_pts = hls->end_pts;
-        hls->last_segment->end_pts = pkt->pts;
 
         old_filename = av_strdup(vs->avf->url);
         if (!old_filename) {
@@ -2311,6 +2314,14 @@ static int hls_write_packet(AVFormatContext *s, AVPacket *pkt)
 
         if (vs->start_pos || hls->segment_type != SEGMENT_TYPE_FMP4) {
             ret = hls_append_segment(s, hls, vs, vs->duration, vs->start_pos, vs->size);
+
+            // Store the end pts in the last segment?
+            if (vs->last_segment) {
+                vs->last_segment->start_pts = vs->end_pts;
+                vs->last_segment->end_pts = pkt->pts;
+                vs->last_segment->start_frame = vs->end_frame;
+                vs->last_segment->end_frame = st->nb_frames;
+            }
             vs->end_pts = pkt->pts;
             vs->duration = 0;
             if (ret < 0) {
@@ -2318,6 +2329,7 @@ static int hls_write_packet(AVFormatContext *s, AVPacket *pkt)
                 return ret;
             }
         }
+        vs->end_frame = st->nb_frames;
 
         if (hls->segment_type != SEGMENT_TYPE_FMP4) {
             vs->start_pos = new_start_pos;
