@@ -129,6 +129,8 @@ extern AVInputFormat  ff_eac3_demuxer;
 extern AVOutputFormat ff_eac3_muxer;
 extern AVInputFormat  ff_epaf_demuxer;
 extern AVOutputFormat ff_f4v_muxer;
+extern AVInputFormat  ff_ffm_demuxer;
+extern AVOutputFormat ff_ffm_muxer;
 extern AVInputFormat  ff_ffmetadata_demuxer;
 extern AVOutputFormat ff_ffmetadata_muxer;
 extern AVOutputFormat ff_fifo_muxer;
