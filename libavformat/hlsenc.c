@@ -814,7 +814,7 @@ static int hls_mux_init(AVFormatContext *s, VariantStream *vs)
 
         av_dict_copy(&options, hls->format_options, 0);
         av_dict_set(&options, "fflags", "-autobsf", 0);
-        av_dict_set(&options, "movflags", "frag_custom+dash+delay_moov", 0);
+        av_dict_set(&options, "movflags", "frag_custom+dash+delay_moov+global_sidx", 0);
         ret = avformat_init_output(oc, &options);
         if (ret < 0)
             return ret;
