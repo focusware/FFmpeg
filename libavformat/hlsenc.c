@@ -2201,7 +2201,7 @@ static int hls_write_packet(AVFormatContext *s, AVPacket *pkt)
         end_pts = init_list_dur + after_init_list_dur ;
     }
 
-    if (vs->start_pts == AV_NOPTS_VALUE) {
+    if (st->codecpar->codec_type == AVMEDIA_TYPE_VIDEO && vs->start_pts == AV_NOPTS_VALUE) {
         vs->start_pts = pkt->pts;
         vs->end_frame = st->nb_frames;
     }
