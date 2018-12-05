@@ -605,7 +605,7 @@ int ff_sdp_parse(AVFormatContext *s, const char *content);
  * Receive one RTP packet from an TCP interleaved RTSP stream.
  */
 int ff_rtsp_tcp_read_packet(AVFormatContext *s, RTSPStream **prtsp_st,
-                            uint8_t *buf, int buf_size);
+                            uint8_t *buf, int buf_size, int64_t *recvtime);
 
 /**
  * Send buffered packets over TCP.

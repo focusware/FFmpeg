@@ -2081,7 +2081,7 @@ static int pick_stream(AVFormatContext *s, RTSPStream **rtsp_st,
 
 static int read_packet(AVFormatContext *s,
                        RTSPStream **rtsp_st, RTSPStream *first_queue_st,
-                       int64_t wait_end)
+                       int64_t wait_end, int64_t *recvtime)
 {
     RTSPState *rt = s->priv_data;
     int len;
@@ -2090,7 +2090,7 @@ static int read_packet(AVFormatContext *s,
     default:
 #if CONFIG_RTSP_DEMUXER
     case RTSP_LOWER_TRANSPORT_TCP:
-        len = ff_rtsp_tcp_read_packet(s, rtsp_st, rt->recvbuf, RECVBUF_SIZE);
+        len = ff_rtsp_tcp_read_packet(s, rtsp_st, rt->recvbuf, RECVBUF_SIZE, recvtime);
         break;
 #endif
     case RTSP_LOWER_TRANSPORT_UDP:
@@ -2181,13 +2181,15 @@ redo:
             return AVERROR(ENOMEM);
     }
 
-    len = read_packet(s, &rtsp_st, first_queue_st, wait_end);
+    int64_t recvtime = 0;
+    len = read_packet(s, &rtsp_st, first_queue_st, wait_end, &recvtime);
     if (len == AVERROR(EAGAIN) && first_queue_st &&
         rt->transport == RTSP_TRANSPORT_RTP) {
         av_log(s, AV_LOG_WARNING,
                 "max delay reached. need to consume packet\n");
         rtsp_st = first_queue_st;
         ret = ff_rtp_parse_packet(rtsp_st->transport_priv, pkt, NULL, 0);
+        pkt->pos = recvtime;
         goto end;
     }
     if (len < 0)
@@ -2249,7 +2251,8 @@ redo:
                 if (rt->nb_byes == rt->nb_rtsp_streams)
                     return AVERROR_EOF;
             }
-        }
+        } else
+            pkt->pos = recvtime;
     } else if (CONFIG_RTPDEC && rt->ts) {
         ret = avpriv_mpegts_parse_packet(rt->ts, pkt, rt->recvbuf, len);
         if (ret >= 0) {

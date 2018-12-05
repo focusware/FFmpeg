@@ -748,7 +748,7 @@ static int rtsp_read_header(AVFormatContext *s)
 }
 
 int ff_rtsp_tcp_read_packet(AVFormatContext *s, RTSPStream **prtsp_st,
-                            uint8_t *buf, int buf_size)
+                            uint8_t *buf, int buf_size, int64_t *recvtime)
 {
     RTSPState *rt = s->priv_data;
     int id, len, i, ret;
@@ -756,6 +756,7 @@ int ff_rtsp_tcp_read_packet(AVFormatContext *s, RTSPStream **prtsp_st,
 
     av_log(s, AV_LOG_TRACE, "tcp_read_packet:\n");
 redo:
+    *recvtime = av_gettime();
     for (;;) {
         RTSPMessageHeader reply;
 
